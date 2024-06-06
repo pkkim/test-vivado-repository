@@ -32,5 +32,4 @@ end
     .wdata (wdata),
     .rdata (rdata)
   );
-
 endmodule
