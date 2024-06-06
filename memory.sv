@@ -16,7 +16,6 @@
 
 -------------------------------------------------------------------------- */
 module memory
-
   #( parameter ADDR_WIDTH = 2,
      parameter DATA_WIDTH = 8 ) (
     input clk,
