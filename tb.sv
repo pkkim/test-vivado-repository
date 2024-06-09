@@ -16,6 +16,7 @@ initial begin
     rst = 1;
     a = 0;
     #20 rst = 0;
+    // #20 assert(2'b0 == 2'b1) else $fatal(1, "foo");
     #40 $finish;
    // #20 wr_en = 1;
    // wdata = 8'hAA;
