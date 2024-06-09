@@ -16,6 +16,7 @@ initial begin
     rst = 1;
     a = 0;
     #20 rst = 0;
+    #40 $finish;
    // #20 wr_en = 1;
    // wdata = 8'hAA;
    // #20 wr_en = 0;
