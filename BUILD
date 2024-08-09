@@ -5,3 +5,10 @@ sh_test(
     data = ["sim.tcl", "memory.sv", "tb.sv"],
     size = "small",
 )
+
+sh_test(
+    name = "hello_world_test",
+    srcs = ["hello_world.sh"],
+    data = [],
+    size = "small",
+)
