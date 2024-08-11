@@ -12,3 +12,9 @@ sh_test(
     data = [],
     size = "small",
 )
+
+sh_test(
+    name = "5TSGKK0G_test",
+    srcs = ["random-junk/5TSGKK0G_test.sh"],
+    size = "small",
+)
