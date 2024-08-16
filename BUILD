@@ -8,7 +8,7 @@ sh_test(
 
 sh_test(
     name = "hello_world_test",
-    srcs = ["hello_world.sh"],
+    srcs = ["hello_world_test.sh"],
     data = [],
     size = "small",
 )
