@@ -7,6 +7,13 @@ sh_test(
 )
 
 sh_test(
+    name = "script_that_fails",
+    srcs = ["script_that_fails.sh"],
+    data = [],
+    size = "small",
+)
+
+sh_test(
     name = "hello_world_test",
     srcs = ["hello_world_test.sh"],
     data = [],
