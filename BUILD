@@ -13,11 +13,18 @@ sh_test(
     size = "small",
 )
 
+sh_binary(
+    name = "fake_dependency",
+    srcs = ["fake_dependency.sh"],
+    data = [],
+)
+
 sh_test(
     name = "hello_world_test",
     srcs = ["hello_world_test.sh"],
     data = [],
     size = "small",
+    deps = [":fake_dependency"],
 )
 
 sh_test(
