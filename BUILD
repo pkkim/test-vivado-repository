@@ -13,7 +13,7 @@ sh_test(
     size = "small",
 )
 
-sh_binary(
+sh_library(
     name = "fake_dependency",
     srcs = ["fake_dependency.sh"],
     data = [],
