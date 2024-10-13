@@ -13,6 +13,6 @@ echo "Who am I?"
 whoami
 
 echo "saying yes 100 times"
-yes | head -100
+yes | head -100 1>&2
 
 exit 0
