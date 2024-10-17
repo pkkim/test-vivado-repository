@@ -196,69 +196,69 @@ build --aspects //bazel/python:import_check.bzl%import_check
 build --action_env=BAZEL_DO_NOT_DETECT_CPP_TOOLCHAIN=1
 build --incompatible_enable_cc_toolchain_resolution
 
-# default build is gcc 12 and libstdc++ (no --config option)
-build --host_platform=//bazel/platforms:amd64_rocky9_gcc12
-
-build --verbose_failures
-
-### compiler toolchain configs
-### default r9 to use march=cascadelake and c7 to use march=sandybridge
-
-# build explicitly with gcc, currently 12, and libstdc++ (--config=gcc)
-build:gcc --host_platform=//bazel/platforms:amd64_rocky9_gcc12
-build:gcc --features=arch-cascadelake
-
-# build explicitly with gcc 12 and libstdc++ (--config=gcc12)
-build:gcc12 --host_platform=//bazel/platforms:amd64_rocky9_gcc12
-build:gcc12 --features=arch-cascadelake
-
-# build explicitly with gcc 13 and libstdc++ (--config=gcc13)
-build:gcc13 --host_platform=//bazel/platforms:amd64_rocky9_gcc13
-build:gcc13 --features=arch-cascadelake
-
-# build explicitly with clang, currently 17, and libc++ (--config=clang)
-build:clang --host_platform=//bazel/platforms:amd64_rocky9_clang17
-build:clang --features=arch-cascadelake
-
-# build explicitly with clang 17 and libc++ (--config=clang17)
-build:clang17 --host_platform=//bazel/platforms:amd64_rocky9_clang17
-build:clang17 --features=arch-cascadelake
-
-# build explicitly with gcc, currently 12, and libstdc++ (--config=c7gcc)
-build:c7gcc --host_platform=//bazel/platforms:amd64_centos7_gcc12
-build:c7gcc --features=arch-sandybridge
-
-# build explicitly with gcc 12 and libstdc++ (--config=c7gcc12)
-build:c7gcc12 --host_platform=//bazel/platforms:amd64_centos7_gcc12
-build:c7gcc12 --features=arch-sandybridge
-
-# build explicitly with gcc 13 and libstdc++ (--config=c7gcc13)
-build:c7gcc13 --host_platform=//bazel/platforms:amd64_centos7_gcc13
-build:c7gcc13 --features=arch-sandybridge
-
-# build explicitly with clang, currently 17, and libc++ (--config=c7clang)
-build:c7clang --host_platform=//bazel/platforms:amd64_centos7_clang17
-build:c7clang --features=arch-sandybridge
-
-# build explicitly with clang 17 and libc++ (--config=c7clang17)
-build:c7clang17 --host_platform=//bazel/platforms:amd64_centos7_clang17
-build:c7clang17 --features=arch-sandybridge
-
-# build explicity with gcc 12 and libstdc++ and python 3.11.1 (--config=py311)
-build:py311 --host_platform=//bazel/platforms:amd64_rocky9_gcc12_experimentalpython
-build:py311 --features=arch-cascadelake
-
-# build explicity with gcc 12 and libstdc++ and python 3.11.1 (--config=c7py311)
-build:c7py311 --host_platform=//bazel/platforms:amd64_centos7_gcc12_experimentalpython
-build:c7py311 --features=arch-sandybridge
-
-# build explicitly with mxe, currently gcc12, and libstdc++ (--config=mxe)
-build:mxe --host_platform=//bazel/platforms:amd64_rocky9_gcc12
-build:mxe --platforms=//bazel/platforms:amd64_rocky9_mxe_gcc12
-
-# build explicitly with mxe gcc 12 and libstdc++ (--config=mxe_gcc12)
-build:mxe_gcc12 --host_platform=//bazel/platforms:amd64_rocky9_gcc12
-build:mxe_gcc12 --platforms=//bazel/platforms:amd64_rocky9_mxe_gcc12
+# # default build is gcc 12 and libstdc++ (no --config option)
+# build --host_platform=//bazel/platforms:amd64_rocky9_gcc12
+# 
+# build --verbose_failures
+# 
+# ### compiler toolchain configs
+# ### default r9 to use march=cascadelake and c7 to use march=sandybridge
+# 
+# # build explicitly with gcc, currently 12, and libstdc++ (--config=gcc)
+# build:gcc --host_platform=//bazel/platforms:amd64_rocky9_gcc12
+# build:gcc --features=arch-cascadelake
+# 
+# # build explicitly with gcc 12 and libstdc++ (--config=gcc12)
+# build:gcc12 --host_platform=//bazel/platforms:amd64_rocky9_gcc12
+# build:gcc12 --features=arch-cascadelake
+# 
+# # build explicitly with gcc 13 and libstdc++ (--config=gcc13)
+# build:gcc13 --host_platform=//bazel/platforms:amd64_rocky9_gcc13
+# build:gcc13 --features=arch-cascadelake
+# 
+# # build explicitly with clang, currently 17, and libc++ (--config=clang)
+# build:clang --host_platform=//bazel/platforms:amd64_rocky9_clang17
+# build:clang --features=arch-cascadelake
+# 
+# # build explicitly with clang 17 and libc++ (--config=clang17)
+# build:clang17 --host_platform=//bazel/platforms:amd64_rocky9_clang17
+# build:clang17 --features=arch-cascadelake
+# 
+# # build explicitly with gcc, currently 12, and libstdc++ (--config=c7gcc)
+# build:c7gcc --host_platform=//bazel/platforms:amd64_centos7_gcc12
+# build:c7gcc --features=arch-sandybridge
+# 
+# # build explicitly with gcc 12 and libstdc++ (--config=c7gcc12)
+# build:c7gcc12 --host_platform=//bazel/platforms:amd64_centos7_gcc12
+# build:c7gcc12 --features=arch-sandybridge
+# 
+# # build explicitly with gcc 13 and libstdc++ (--config=c7gcc13)
+# build:c7gcc13 --host_platform=//bazel/platforms:amd64_centos7_gcc13
+# build:c7gcc13 --features=arch-sandybridge
+# 
+# # build explicitly with clang, currently 17, and libc++ (--config=c7clang)
+# build:c7clang --host_platform=//bazel/platforms:amd64_centos7_clang17
+# build:c7clang --features=arch-sandybridge
+# 
+# # build explicitly with clang 17 and libc++ (--config=c7clang17)
+# build:c7clang17 --host_platform=//bazel/platforms:amd64_centos7_clang17
+# build:c7clang17 --features=arch-sandybridge
+# 
+# # build explicity with gcc 12 and libstdc++ and python 3.11.1 (--config=py311)
+# build:py311 --host_platform=//bazel/platforms:amd64_rocky9_gcc12_experimentalpython
+# build:py311 --features=arch-cascadelake
+# 
+# # build explicity with gcc 12 and libstdc++ and python 3.11.1 (--config=c7py311)
+# build:c7py311 --host_platform=//bazel/platforms:amd64_centos7_gcc12_experimentalpython
+# build:c7py311 --features=arch-sandybridge
+# 
+# # build explicitly with mxe, currently gcc12, and libstdc++ (--config=mxe)
+# build:mxe --host_platform=//bazel/platforms:amd64_rocky9_gcc12
+# build:mxe --platforms=//bazel/platforms:amd64_rocky9_mxe_gcc12
+# 
+# # build explicitly with mxe gcc 12 and libstdc++ (--config=mxe_gcc12)
+# build:mxe_gcc12 --host_platform=//bazel/platforms:amd64_rocky9_gcc12
+# build:mxe_gcc12 --platforms=//bazel/platforms:amd64_rocky9_mxe_gcc12
 
 # user specified arch needs to override the default arch
 build:arch-broadwell --features=-arch-cascadelake
