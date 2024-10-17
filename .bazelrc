@@ -1,0 +1,450 @@
+# Lots of flags taken from: https://docs.aspect.build/guides/bazelrc/
+
+############################
+# General Configuration
+############################
+
+# # Workaround for jvm/certificate issues
+# # https://github.com/bazelbuild/bazel/issues/10349
+# startup --host_jvm_args=-Djavax.net.ssl.trustStore=/etc/pki/ca-trust/extracted/java/cacerts --host_jvm_args=-Djavax.net.ssl.trustStorePassword=changeit
+# build --action_env=REQUESTS_CA_BUNDLE=/etc/pki/tls/certs/ca-bundle.crt
+# build --action_env=NODE_EXTRA_CA_CERTS=/etc/pki/tls/certs/ca-bundle.crt
+# build --action_env=ELECTRON_MIRROR=https://prod-jfrog.oldmissioncapital.com:443/artifactory/ny5-prod-tech-binaries/electron/
+# build --action_env=ELECTRON_CUSTOM_DIR="{{ version }}"
+# build --action_env=PLAYWRIGHT_DOWNLOAD_HOST=https://prod-jfrog.oldmissioncapital.com/artifactory/playwright/
+
+# # Rewrite dependency URLs to internal artifactory
+# common --experimental_downloader_config .bazel_rewrite
+
+# Don't allow network access for build actions in the sandbox.
+# Ensures that you don't accidentally make non-hermetic actions/tests which depend on remote
+# services.
+# Developers should tag targets with `tags=["requires-network"]` to opt-out of the enforcement.
+# Docs: https://bazel.build/reference/command-line-reference#flag--sandbox_default_allow_network
+build --sandbox_default_allow_network=false
+test --sandbox_default_allow_network=false
+
+# Use a static value for `PATH` and does not inherit `LD_LIBRARY_PATH`. Doesn't let environment
+# variables like `PATH` sneak into the build, which can cause massive cache misses when they change.
+# Use `--action_env=ENV_VARIABLE` if you want to inherit specific environment variables from the
+# client, but note that doing so can prevent cross-user caching if a shared cache is used.
+# Docs: https://bazel.build/reference/command-line-reference#flag--incompatible_strict_action_env
+build --incompatible_strict_action_env
+test --incompatible_strict_action_env
+
+# Propagate tags from a target declaration to the actions' execution requirements.
+# Ensures that tags applied in your BUILD file, like `tags=["no-remote"]`
+# get propagated to actions created by the rule.
+# Without this option, you rely on rules authors to manually check the tags you passed
+# and apply relevant ones to the actions they create.
+# See https://github.com/bazelbuild/bazel/issues/8830 for details.
+# Docs: https://bazel.build/reference/command-line-reference#flag--experimental_allow_tags_propagation
+build --experimental_allow_tags_propagation
+fetch --experimental_allow_tags_propagation
+query --experimental_allow_tags_propagation
+
+# Directories used by sandboxed non-worker execution may be reused to avoid unnecessary setup costs.
+# Save time on Sandbox creation and deletion when many of the same kind of action run during the
+# build.
+# No longer experimental in Bazel 6: https://github.com/bazelbuild/bazel/commit/c1a95501a5611878e5cc43a3cc531f2b9e47835b
+# Docs: https://bazel.build/reference/command-line-reference#flag--reuse_sandbox_directories
+build --experimental_reuse_sandbox_directories
+
+# TODO experiment with this one
+# # Do not build runfiles symlink forests for external repositories under
+# # `.runfiles/wsname/external/repo` (in addition to `.runfiles/repo`). This reduces runfiles &
+# # sandbox creation times & prevents accidentally depending on this feature which may flip to off by
+# # default in the future. Note, some rules may fail under this flag, please file issues with the rule
+# # author.
+# # Docs: https://bazel.build/reference/command-line-reference#flag--legacy_external_runfiles
+# build --nolegacy_external_runfiles
+# run --nolegacy_external_runfiles
+# test --nolegacy_external_runfiles
+
+# Do not automatically create `__init__.py` files in the runfiles of Python targets. Fixes the wrong
+# default that comes from Google's internal monorepo by using `__init__.py` to delimit a Python
+# package. Precisely, when a `py_binary` or `py_test` target has `legacy_create_init` set to `auto (the
+# default), it is treated as false if and only if this flag is set. See
+# https://github.com/bazelbuild/bazel/issues/10076.
+# Docs: https://bazel.build/reference/command-line-reference#flag--incompatible_default_to_explicit_init_py
+build --incompatible_default_to_explicit_init_py
+
+# Disable version stamping
+build --nostamp
+
+# never strip debugging information from binaries (default is to strip in fastbuild but not debug or optimized)
+build --strip never
+
+# Change outdirs to be platform specific rather than CPU specific
+# In other words, 'k8-fastbuild' will be renamed to something like 'amd64_centos7_gcc12-fastbuild',
+# and it will differ depending on the OS and compiler
+build --experimental_platform_in_output_dir
+
+# asks craco_bin to not use eslint during build (lint is done on status_check.py)
+build --action_env=DISABLE_ESLINT_PLUGIN=true
+
+# Set timezone to ET since unittests currently expect to be run in ET
+test --test_env=TZ='America/New_York'
+
+# Pandas/numpy creates threadpools at import time, which causes applications that don't need pandas/numpy
+# but its dependencies import it to have an absurd number of threads. Instead, set these environment
+# variables for the bazel test environment to avoid the creation of threadpools.
+test --test_env=MKL_NUM_THREADS=1
+test --test_env=OMP_NUM_THREADS=1
+test --test_env=NUMEXPR_NUM_THREADS=1
+test --test_env=NUMEXPR_MAX_THREADS=1
+test --test_env=OPENBLAS_NUM_THREADS=1
+test --test_env=VECLIB_MAXIMUM_THEREADS=1
+
+# This is so that when we run `bazel test`, it will output the errors to the console in addition to
+# a log file. However, if the errors are too long, it will print a message in the terminal indicating
+# that the error logs are too long and instead output them to the log file.
+test --test_output=errors
+
+# needed for anything that references hugetlbfs
+test --sandbox_tmpfs_path='/dev/hugepages'
+
+# Sandbox /dev/shm, as any PID-based uniqueness shm naming scheme (e.g. equity system shmtables) will break
+# down due to the sandbox PID namespacing
+test --sandbox_tmpfs_path='/dev/shm'
+
+# Sandbox /var/tmp - some projects use it in test outside of CI
+test --sandbox_tmpfs_path='/var/tmp'
+
+# Expose git info to bazel for local releases
+build --workspace_status_command=bazel/workspace_status.sh
+
+# Modifying a file during a build can cause the remote cache to be poisoned.
+# https://bazel.build/remote/caching#known-issues:~:text=Input%20file%20modification%20during%20a%20build
+# Currently disabled because this causes issues with npm modules and breaks caching.
+# https://github.com/bazelbuild/bazel/issues/17162#:~:text=I%20can%20reproduce%20the%20warning%20with%20example%20from%20rules_js%2C%20but%20it%27s%20caused%20by%20unresolved%20symlink%20(which%20is%20always%20considered%20modified)%20which%20is%20different%20from%20the%20original%20issue.
+# build --experimental_guard_against_concurrent_changes
+# test --experimental_guard_against_concurrent_changes
+
+# To protect against the race conditions as defined above, we prevent local
+# uploads to the remote cache (except for from CI machines).
+# Docs: https://bazel.build/reference/command-line-reference#flag--remote_upload_local_results
+build --remote_upload_local_results=0
+test --remote_upload_local_results=0
+
+# Don't apply `--noremote_upload_local_results` and `--noremote_accept_cached` to the disk cache.
+# If you have both `--noremote_upload_local_results` and `--disk_cache`, then this fixes a bug where
+# Bazel doesn't write to the local disk cache as it treats as a remote cache.
+# Docs: https://bazel.build/reference/command-line-reference#flag--incompatible_remote_results_ignore_disk
+build --incompatible_remote_results_ignore_disk
+test --incompatible_remote_results_ignore_disk
+
+# Enable zstd compression/decompression for cache blobs
+build --experimental_remote_cache_compression
+test --experimental_remote_cache_compression
+
+
+#
+# The below `incompatible` tags are opt-ins for future backwards-incompatible changes to Bazel defaults, to make future upgrades less bugprone
+#
+
+# Check `testonly` for prerequisite targets that are output files by looking up the `testonly `of the generating rule
+# This makes `testonly` behave as one would naively expect (by default, all genrules are assumed to be `testonly=0` and their true values ignored)
+build --incompatible_check_testonly_for_output_files
+
+# Visibility on config_setting isn't historically enforced. This is purely for legacy reasons. There's no philosophical reason to distinguish them.
+# Without these flags, every config_setting is visible to every target
+# These flags make config_setting follow the same visibility rules as other bazel targets
+# https://github.com/bazelbuild/bazel/issues/12932
+build --incompatible_enforce_config_setting_visibility
+build --incompatible_config_setting_private_default_visibility
+
+# Tests with the `exclusive` tag will by default never use remote cache or sandboxing
+# This flag means they can, which was the originally intended behavior of `exclusive` and matches naive expectations
+# For the previous behavior, add the `local` tag
+build --incompatible_exclusive_test_sandboxed
+
+# Outputs referenced by BEP are not uploaded to remote cache if the generating action cannot be cached remotely
+build --experimental_remote_build_event_upload=minimal
+
+# Output paths are relative to input root instead of working directory
+build --incompatible_remote_output_paths_relative_to_input_root
+
+# Bazel will use new exit code 39 instead of 34 if remote cache evicts blobs during the build
+# This shouldn't matter, because we never use the bazel exit code's specific values, but is a harmless change to reduce the chance of a bug caused by an upgrade
+build --incompatible_remote_use_new_exit_code_for_lost_inputs
+
+# Disables the to_json and to_proto methods of struct, which pollute the struct field namespace.
+# Instead, use json.encode or json.encode_indent for JSON, or proto.encode_text for textproto.
+# We aren't currently using to_json and to_proto, and future versions of bazel completely remove it. This flag will prevent anyone from adding in these methods.
+build --incompatible_struct_has_no_methods
+
+# Top level aspect will honor its required providers and only run on top level targets whose rules'
+# advertised providers satisfy the required providers of the aspect
+build --incompatible_top_level_aspects_require_providers
+
+# Bazel will no longer allow using cc_configure from @bazel_tools.
+# Please see https://github.com/bazelbuild/bazel/issues/10134 for details and migration instructions
+build --incompatible_use_cc_configure_from_rules_cc
+
+# Use --features only for the target configuration and --host_features for the exec configuration
+build --incompatible_use_host_features
+
+# Ensure bazel build fails if python files aren't importable
+build --aspects //bazel/python:import_check.bzl%import_check
+
+############################
+# Compiler Configuration
+############################
+
+# Do not use system compiler
+build --action_env=BAZEL_DO_NOT_DETECT_CPP_TOOLCHAIN=1
+build --incompatible_enable_cc_toolchain_resolution
+
+# default build is gcc 12 and libstdc++ (no --config option)
+build --host_platform=//bazel/platforms:amd64_rocky9_gcc12
+
+build --verbose_failures
+
+### compiler toolchain configs
+### default r9 to use march=cascadelake and c7 to use march=sandybridge
+
+# build explicitly with gcc, currently 12, and libstdc++ (--config=gcc)
+build:gcc --host_platform=//bazel/platforms:amd64_rocky9_gcc12
+build:gcc --features=arch-cascadelake
+
+# build explicitly with gcc 12 and libstdc++ (--config=gcc12)
+build:gcc12 --host_platform=//bazel/platforms:amd64_rocky9_gcc12
+build:gcc12 --features=arch-cascadelake
+
+# build explicitly with gcc 13 and libstdc++ (--config=gcc13)
+build:gcc13 --host_platform=//bazel/platforms:amd64_rocky9_gcc13
+build:gcc13 --features=arch-cascadelake
+
+# build explicitly with clang, currently 17, and libc++ (--config=clang)
+build:clang --host_platform=//bazel/platforms:amd64_rocky9_clang17
+build:clang --features=arch-cascadelake
+
+# build explicitly with clang 17 and libc++ (--config=clang17)
+build:clang17 --host_platform=//bazel/platforms:amd64_rocky9_clang17
+build:clang17 --features=arch-cascadelake
+
+# build explicitly with gcc, currently 12, and libstdc++ (--config=c7gcc)
+build:c7gcc --host_platform=//bazel/platforms:amd64_centos7_gcc12
+build:c7gcc --features=arch-sandybridge
+
+# build explicitly with gcc 12 and libstdc++ (--config=c7gcc12)
+build:c7gcc12 --host_platform=//bazel/platforms:amd64_centos7_gcc12
+build:c7gcc12 --features=arch-sandybridge
+
+# build explicitly with gcc 13 and libstdc++ (--config=c7gcc13)
+build:c7gcc13 --host_platform=//bazel/platforms:amd64_centos7_gcc13
+build:c7gcc13 --features=arch-sandybridge
+
+# build explicitly with clang, currently 17, and libc++ (--config=c7clang)
+build:c7clang --host_platform=//bazel/platforms:amd64_centos7_clang17
+build:c7clang --features=arch-sandybridge
+
+# build explicitly with clang 17 and libc++ (--config=c7clang17)
+build:c7clang17 --host_platform=//bazel/platforms:amd64_centos7_clang17
+build:c7clang17 --features=arch-sandybridge
+
+# build explicity with gcc 12 and libstdc++ and python 3.11.1 (--config=py311)
+build:py311 --host_platform=//bazel/platforms:amd64_rocky9_gcc12_experimentalpython
+build:py311 --features=arch-cascadelake
+
+# build explicity with gcc 12 and libstdc++ and python 3.11.1 (--config=c7py311)
+build:c7py311 --host_platform=//bazel/platforms:amd64_centos7_gcc12_experimentalpython
+build:c7py311 --features=arch-sandybridge
+
+# build explicitly with mxe, currently gcc12, and libstdc++ (--config=mxe)
+build:mxe --host_platform=//bazel/platforms:amd64_rocky9_gcc12
+build:mxe --platforms=//bazel/platforms:amd64_rocky9_mxe_gcc12
+
+# build explicitly with mxe gcc 12 and libstdc++ (--config=mxe_gcc12)
+build:mxe_gcc12 --host_platform=//bazel/platforms:amd64_rocky9_gcc12
+build:mxe_gcc12 --platforms=//bazel/platforms:amd64_rocky9_mxe_gcc12
+
+# user specified arch needs to override the default arch
+build:arch-broadwell --features=-arch-cascadelake
+build:arch-broadwell --features=-arch-sandybridge
+build:arch-broadwell --features=arch-broadwell
+
+build:arch-cascadelake --features=-arch-sandybridge
+build:arch-cascadelake --features=arch-cascadelake
+
+build:arch-icelake --features=-arch-cascadelake
+build:arch-icelake --features=-arch-sandybridge
+build:arch-icelake --features=arch-icelake-server
+
+build:arch-native --features=-arch-cascadelake
+build:arch-native --features=-arch-sandybridge
+build:arch-native --features=arch-native
+
+build:arch-sandybridge --features=-arch-cascadelake
+build:arch-sandybridge --features=arch-sandybridge
+
+build:arch-sapphirerapids --features=-arch-cascadelake
+build:arch-sapphirerapids --features=-arch-sandybridge
+build:arch-sapphirerapids --features=arch-sapphirerapids
+
+build:arch-noarch --features=-arch-cascadelake
+build:arch-noarch --features=-arch-sandybridge
+
+# ===================================================================================
+# WARNING Test and build tag filters overwrite on repetition. They do not accumulate.
+# ===================================================================================
+
+# build optimized configuration (--config=gcc-opt-ci)
+build:gcc-opt-ci -c opt
+build:gcc-opt-ci --build_tag_filters=-ansible,-vivado2020.1
+test:gcc-opt-ci --test_tag_filters=-status-check-only,-ansible,-vivado2020.1
+
+# build unoptimized configuration (--config=gcc-fastbuild-ci)
+build:gcc-fastbuild-ci --build_tag_filters=-ansible,-only-build-ci-with-publish,-vivado2020.1
+test:gcc-fastbuild-ci --test_tag_filters=-status-check-only,-ansible,-only-build-ci-with-publish,-vivado2020.1
+
+# build optimized clang configuration (--config=clang-opt-ci)
+# This differs from the gcc-opt-ci as the publish only targets aren't built
+build:clang-opt-ci -c opt
+build:clang-opt-ci --build_tag_filters=-ansible,-only-build-ci-with-publish,-vivado2020.1
+test:clang-opt-ci --test_tag_filters=-status-check-only,-ansible,-only-build-ci-with-publish,-vivado2020.1
+
+# build unoptimized clang configuration (--config=clang-fastbuild-ci)
+build:clang-fastbuild-ci --build_tag_filters=-ansible,-only-build-ci-with-publish,-vivado2020.1
+test:clang-fastbuild-ci --test_tag_filters=-status-check-only,-ansible,-only-build-ci-with-publish,-vivado2020.1
+
+build:vivado --build_tag_filters=vivado2020.1
+test:vivado --test_tag_filters=vivado2020.1
+
+# build coverage configuration (--config=coverage)
+build:coverage --build_tag_filters=-ansible,-coverage-incompatible,-vivado2020.1
+test:coverage --test_tag_filters=-status-check-only,-ansible,-coverage-incompatible,-vivado2020.1
+
+# build with asan enabled in ci (--config=asan-ci)
+build:asan-ci --features=enable-asan
+build:asan-ci --action_env ASAN_OPTIONS=detect_leaks=1:color=always:verbosity=1
+build:asan-ci --platform_suffix="asan"
+build:asan-ci --build_tag_filters=-no-asan,-ansible,-only-build-ci-with-publish,-vivado2020.1
+test:asan-ci --test_tag_filters=-no-asan,-status-check-only,-ansible,-only-build-ci-with-publish,-vivado2020.1
+
+# build with msan enabled in ci (--config=msan-ci)
+build:msan-ci --features=enable-msan
+build:msan-ci --action_env MSAN_OPTIONS=color=always:verbosity=1
+build:msan-ci --platform_suffix="msan"
+build:msan-ci --build_tag_filters=-no-msan,-ansible,-only-build-ci-with-publish,-vivado2020.1
+test:msan-ci --test_tag_filters=-no-msan,-status-check-only,-ansible,-only-build-ci-with-publish,-vivado2020.1
+
+# build with ubsan enabled in ci (--config=ubsan-ci)
+build:ubsan-ci --features=enable-ubsan
+build:ubsan-ci --action_env UBSAN_OPTIONS=print_stacktrace=1:color=always:verbosity=1
+build:ubsan-ci --platform_suffix="ubsan"
+build:ubsan-ci --build_tag_filters=-no-ubsan,-ansible,-only-build-ci-with-publish,-vivado2020.1
+test:ubsan-ci --test_tag_filters=-no-ubsan,-status-check-only,-ansible,-only-build-ci-with-publish,-vivado2020.1
+
+# build with asan enabled (--config=asan)
+build:asan --features=enable-asan
+build:asan --action_env ASAN_OPTIONS=detect_leaks=1:color=always:verbosity=1
+build:asan --platform_suffix="asan"
+build:asan --build_tag_filters=-no-asan
+test:asan --test_tag_filters=-no-asan
+
+# build with msan enabled (--config=msan)
+build:msan --features=enable-msan
+build:msan --action_env MSAN_OPTIONS=color=always:verbosity=1
+build:msan --platform_suffix="msan"
+build:msan --build_tag_filters=-no-msan
+test:msan --test_tag_filters=-no-msan
+
+# build with ubsan enabled (--config=ubsan)
+build:ubsan --features=enable-ubsan
+build:ubsan --action_env UBSAN_OPTIONS=print_stacktrace=1:color=always:verbosity=1
+build:ubsan --platform_suffix="ubsan"
+build:ubsan --build_tag_filters=-no-ubsan
+test:ubsan --test_tag_filters=-no-ubsan
+
+############################
+# Tooling Configuration
+############################
+
+# config to run clang_tidy on all targets
+build:clang_tidy --aspects @clang_tidy//clang_tidy:clang_tidy.bzl%clang_tidy_aspect
+build:clang_tidy --output_groups=report
+build:clang_tidy --@clang_tidy//:clang_tidy_config=//:clang_tidy_config
+build:clang_tidy --@clang_tidy//:clang_tidy_executable=/usr/local/clang-17.0/bin/clang-tidy
+build:clang_tidy --build_tag_filters=-no-clang-tidy,-ansible,-vivado2020.1
+build:clang_tidy --test_tag_filters=-no-clang-tidy,-ansible,-vivado2020.1
+
+# mypy type checking
+common:mypy --aspects //bazel/python:mypy.bzl%mypy
+common:mypy --build_tag_filters=mypy,mypy-strict
+
+############################
+# CI Configuration
+############################
+
+# Set number of jobs
+build:ci --jobs 56
+test:ci --jobs 56
+
+# needed for tests in CI that use 1G hugetables
+test:ci --sandbox_tmpfs_path='/dev/hugepages1G'
+
+# Set the CI environment variable
+test:ci --test_env=CI=true --test_env=BOOST_TEST_COLOR_OUTPUT=0
+
+# In ci, we don't want the outputs to go to the console, we want them in the log files.
+test:ci --test_output=summary
+
+# Attempt to build & test every target whose prerequisites were successfully built.
+# Docs: https://bazel.build/docs/user-manual#keep-going
+build:ci --keep_going
+test:ci  --keep_going
+
+# Announce all command options read from the bazelrc file(s) when starting up at the
+# beginning of each Bazel invocation. This is very useful on CI to be able to inspect what Bazel rc
+# settings are being applied on each run.
+# Docs: https://bazel.build/docs/user-manual#announce-rc
+build:ci --announce_rc
+
+# Add a timestamp to each message generated by Bazel specifying the time at which the message was
+# displayed.
+# Docs: https://bazel.build/docs/user-manual#show-timestamps
+build:ci --show_timestamps
+
+# Don't use cursor controls in its screen output.
+# Docs: https://bazel.build/docs/user-manual#curses
+build:ci --curses=no
+
+# Upload locally executed action results to the remote cache.
+# Docs: https://bazel.build/reference/command-line-reference#flag--remote_upload_local_results
+build:ci --remote_upload_local_results=1
+test:ci --remote_upload_local_results=1
+
+############################
+# Remote Configuration
+############################
+
+build:remote --remote_cache=http://bazel-cache.omc.oldmissioncapital.com:8080
+test:remote --remote_cache=http://bazel-cache.omc.oldmissioncapital.com:8080
+
+# Fall back to standalone local execution strategy if remote execution fails. If the grpc remote
+# cache connection fails, it will fail the build, add this so it falls back to the local cache.
+# Docs: https://bazel.build/reference/command-line-reference#flag--remote_local_fallback
+build:remote --remote_local_fallback
+
+############################
+# Disk Cache Configuration
+############################
+
+build:disk-cache --disk_cache=/home/jenkins/.cache/bazel/disk_cache
+test:disk-cache --disk_cache=/home/jenkins/.cache/bazel/disk_cache
+
+############################
+# Release Configuration
+############################
+
+# Enable version stamping
+build:release --stamp
+
+############################
+# Code Coverage Configuration
+############################
+
+coverage --combined_report=lcov
+coverage --instrumentation_filter=^//.*[/:]
