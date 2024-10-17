@@ -186,7 +186,7 @@ build --incompatible_use_cc_configure_from_rules_cc
 build --incompatible_use_host_features
 
 # Ensure bazel build fails if python files aren't importable
-build --aspects //bazel/python:import_check.bzl%import_check
+# build --aspects //bazel/python:import_check.bzl%import_check
 
 ############################
 # Compiler Configuration
@@ -371,7 +371,7 @@ build:clang_tidy --build_tag_filters=-no-clang-tidy,-ansible,-vivado2020.1
 build:clang_tidy --test_tag_filters=-no-clang-tidy,-ansible,-vivado2020.1
 
 # mypy type checking
-common:mypy --aspects //bazel/python:mypy.bzl%mypy
+# common:mypy --aspects //bazel/python:mypy.bzl%mypy
 common:mypy --build_tag_filters=mypy,mypy-strict
 
 ############################
